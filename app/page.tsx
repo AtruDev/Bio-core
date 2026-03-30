@@ -1,65 +1,166 @@
-import Image from "next/image";
+import { ChevronRight, Dumbbell, Flame, Utensils, Waves, AlertTriangle } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
+import { GenerateDietButton, GenerateWorkoutButton } from "@/components/GenerateButtons";
 
-export default function Home() {
+export default async function DashboardPage() {
+  let hasSupabase = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+  let user = null;
+  let dietPlan: any = null;
+  let workoutPlan: any = null;
+
+  if (hasSupabase && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'seu_url_do_supabase_aqui') {
+    try {
+      const supabase = await createClient();
+      const auth = await supabase.auth.getUser();
+      user = auth.data.user;
+
+      if (user) {
+        // Busca a dieta do dia
+        const { data: dietData } = await supabase
+          .from("dieta_atual")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("data_dieta", new Date().toISOString().split("T")[0])
+          .order("criado_em", { ascending: false });
+        
+        if (dietData && dietData.length > 0) dietPlan = dietData;
+
+        // Busca o treino do dia
+        const { data: workoutData } = await supabase
+          .from("logs_treino")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("data_treino", new Date().toISOString().split("T")[0])
+          .order("criado_em", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (workoutData) workoutPlan = workoutData;
+      }
+    } catch (err) {
+      console.error("Erro ao conectar no banco:", err);
+      hasSupabase = false; // Fallback visual
+    }
+  } else {
+    hasSupabase = false; // Força modo mock se as chaves forem as padrão
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Visão Geral</h1>
+          <p className="text-zinc-400 mt-1">Seu resumo diário de Surf, Dieta e Treino.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        {!hasSupabase && (
+          <div className="flex items-center space-x-2 text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 text-sm">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Executando em Modo Mock (Configure o .env.local)</span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Surf Status Card */}
+        <div className="group relative overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col transition-all hover:shadow-lg hover:shadow-cyan-900/20 hover:border-cyan-500/50">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Waves className="w-24 h-24 text-cyan-400" />
+          </div>
+          <div className="relative z-10 flex flex-col flex-1">
+            <div className="flex items-center space-x-2 text-cyan-400 mb-4">
+              <Waves className="w-5 h-5" />
+              <h3 className="font-semibold">Status do Surf</h3>
+            </div>
+            <div className="flex-1">
+              <p className="text-3xl font-bold text-zinc-50 mb-1">Pico: Piatã</p>
+              <div className="flex items-center justify-start space-x-2 text-sm text-zinc-300 mt-2">
+                <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/20">Swell: 1.5m</span>
+                <span className="px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">Vento: Terral</span>
+              </div>
+            </div>
+            <button className="mt-8 flex items-center text-sm font-medium text-cyan-400 hover:text-cyan-300 group-hover:translate-x-1 transition-transform">
+              Ver Condições Completas <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
         </div>
-      </main>
+
+        {/* Refeição Atual Card */}
+        <div className="group relative overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col transition-all hover:shadow-lg hover:shadow-emerald-900/20 hover:border-emerald-500/50">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Utensils className="w-24 h-24 text-emerald-400" />
+          </div>
+          <div className="relative z-10 flex flex-col flex-1">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2 text-emerald-400">
+                <Utensils className="w-5 h-5" />
+                <h3 className="font-semibold">Refeição Atual</h3>
+              </div>
+              <span className="text-xs font-semibold bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-md border border-zinc-700">Ao Vivo</span>
+            </div>
+
+            {dietPlan ? (
+              <div className="flex-1">
+                <p className="text-2xl font-bold text-zinc-50 mb-3">{dietPlan[0].refeicao_nome}</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-400 leading-relaxed max-h-24 overflow-y-auto pr-2">{dietPlan[0].descricao}</p>
+                </div>
+                <div className="mt-5 flex items-center space-x-4 text-xs">
+                  <div className="flex items-center text-zinc-300 bg-zinc-950/50 px-2 py-1 rounded-md border border-zinc-800">
+                    <Flame className="w-3.5 h-3.5 text-orange-400 mr-1.5"/> {dietPlan[0].calorias} kcal
+                  </div>
+                  <div className="flex items-center text-zinc-300 bg-zinc-950/50 px-2 py-1 rounded-md border border-zinc-800">
+                    <span className="font-bold text-blue-400 mr-1.5">P</span> {dietPlan[0].proteinas}g
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1">
+                <p className="text-2xl font-bold text-zinc-50 mb-3">Marmita IA (Almoço)</p>
+                <p className="text-sm text-zinc-400 mb-2">Pendente geração para hoje...</p>
+              </div>
+            )}
+            
+            <GenerateDietButton />
+          </div>
+        </div>
+
+        {/* Treino do Dia Card */}
+        <div className="group relative overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col transition-all hover:shadow-lg hover:shadow-orange-900/20 hover:border-orange-500/50">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Dumbbell className="w-24 h-24 text-orange-400" />
+          </div>
+          <div className="relative z-10 flex flex-col flex-1">
+            <div className="flex items-center space-x-2 text-orange-400 mb-4">
+              <Dumbbell className="w-5 h-5" />
+              <h3 className="font-semibold">Treino do Dia</h3>
+            </div>
+            
+            {workoutPlan ? (
+              <div className="flex-1 mt-auto">
+                <p className="text-2xl font-bold text-zinc-50">{workoutPlan.tipo_treino}</p>
+                <p className="text-sm text-zinc-400 mb-4 line-clamp-2">{workoutPlan.descricao}</p>
+                <div className="space-y-3 mt-4">
+                  <div className="w-full bg-zinc-950 border border-zinc-800 rounded-full h-2.5 overflow-hidden">
+                    <div className="bg-linear-to-r from-orange-500 to-amber-400 h-full rounded-full w-[10%] relative animate-pulse">
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-400 text-right font-medium">{workoutPlan.duracao_minutos} minutos ({workoutPlan.intensidade})</p>
+                </div>
+              </div>
+            ) : (
+               <div className="flex-1 flex flex-col">
+                <p className="text-2xl font-bold text-zinc-50">Treino Pendente</p>
+                <p className="text-sm text-zinc-400 mb-6">Aguardando IA calcular...</p>
+                 <div className="space-y-3 mt-auto">
+                  <div className="w-full bg-zinc-950 border border-zinc-800 rounded-full h-2.5 overflow-hidden"></div>
+                </div>
+              </div>
+            )}
+
+            <GenerateWorkoutButton />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
