@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/utils/supabase/server'
+import { calcularMifflinStJeor, Biometria } from '@/utils/nutrition'
 
 interface GenerationResult {
   success: boolean
@@ -21,7 +22,7 @@ function getApiKey() {
 /**
  * Gera um plano de dieta adaptativo usando Gemini API
  */
-export async function generateDailyDiet(context: string): Promise<GenerationResult> {
+export async function generateDailyDiet(): Promise<GenerationResult> {
   try {
     const apiKey = getApiKey()
 
@@ -40,19 +41,44 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
     // Busca a biometria
     const { data: perfil } = await supabase.from('perfil_usuario').select('*').eq('id', user.id).single()
 
-    const peso = perfil?.peso ? `Pesando ${perfil.peso}kg` : "Com peso não informado"
-    const objetivo = perfil?.objetivo || "Manutenção"
-    const nivel = perfil?.nivel_surf || "Surfista Intermediário"
+    if (!perfil?.peso || !perfil?.idade || !perfil?.genero) {
+      return { success: false, message: 'Perfil incompleto. Atualize sua Biometria preenchendo Peso, Idade e Gênero.' }
+    }
+
+    const biometria: Biometria = {
+      peso: perfil.peso,
+      altura: perfil.altura || 1.70,
+      idade: perfil.idade,
+      genero: perfil.genero,
+      nivel_surf: perfil.nivel_surf || 'Iniciante',
+      objetivo: perfil.objetivo || 'Manutenção'
+    }
+
+    const macros = calcularMifflinStJeor(biometria)
+
+    const hoje = new Date()
+    const dias = Array.from({length: 7}).map((_, i) => {
+      const d = new Date(hoje)
+      d.setDate(d.getDate() + i)
+      return d.toISOString().split('T')[0]
+    })
 
     const prompt = `
-      Você é um nutricionista especialista estruturando marmitas/dieta para um atleta.
-      O usuário é um ${nivel}, ${peso}, e o objetivo principal do mês é: "${objetivo}".
-      Contexto de mar/condição atual: "${context}".
+      Você é um nutricionista esportivo de elite analisando um atleta surfista (${biometria.nivel_surf}).
+      Oceano de hoje reportado pelo atleta: "${perfil.contexto_mar || 'Sem dados do mar, faça uma dieta padrão de treinos na terra.'}"
+      O cálculo metabólico basal matemático EXATO efetuado em sistema já revelou os dados vitais:
+      - TMB (Taxa Metabólica Basal): ${macros.tmb} kcal
+      - Gasto Total (TEE): ${macros.gasto_total} kcal
+      - META CALÓRICA DIÁRIA PARA ALCANÇAR '${biometria.objetivo}': ${macros.meta_calorica} kcal
+      - DIETA MACROS EXATA (fechar o dia com): ${macros.proteina_g}g Proteína, ${macros.gordura_g}g Gordura, ${macros.carboidrato_g}g Carboidrato.
       
-      Gere 3 refeições balanceadas para o dia considerando sua biometria exata.
-      Responda ESTRITAMENTE em formato JSON com a seguinte estrutura de Array (sem formatação markdown):
+      Gere a dieta para exatos 7 dias correspondentes a essas datas: ${dias.join(', ')}.
+      Dica: a cada dia, as 3 refeições SOMADAS devem atingir a META CALÓRICA e MACROS Diários exatos. Use comida natural (ovos, arroz, frango, azeite).
+
+      Responda ESTRITAMENTE em formato JSON com a seguinte estrutura de Array PLANA (sem formatação markdown):
       [
         {
+          "data_dieta": "DATAAQUI",
           "refeicao_nome": "Café da Manhã",
           "descricao": "O que comer...",
           "calorias": 400,
@@ -70,16 +96,19 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
     const dietPlan = JSON.parse(textResult)
 
     if (user) {
-      // 1. Garante que o usuário tem um perfil configurado (necessário para a chave estrangeira funcionar)
       await supabase.from('perfil_usuario').upsert({
         id: user.id,
-        nome: 'Atru',
+        nome: perfil.nome || 'Atru',
         email: user.email
       }, { onConflict: 'id' })
 
-      // 2. Insere a dieta
+      // Limpa dietas antigas dessa semana para evitar duplicação severa
+      await supabase.from('dieta_atual').delete().eq('user_id', user.id).in('data_dieta', dias)
+
+      // 2. Insere a dieta da semana inteira
       const inserts = dietPlan.map((item: any) => ({
         user_id: user.id,
+        data_dieta: item.data_dieta,
         refeicao_nome: item.refeicao_nome,
         descricao: item.descricao,
         calorias: item.calorias,
@@ -88,10 +117,10 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
         gorduras: item.gorduras,
       }))
       const { error } = await supabase.from('dieta_atual').insert(inserts)
-      if (error) throw new Error('Falha ao salvar a dieta no banco: ' + error.message)
+      if (error) throw new Error('Falha ao salvar a cadeia semanal no banco: ' + error.message)
     }
 
-    return { success: true, message: 'Dieta gerada!', data: dietPlan }
+    return { success: true, message: 'Dieta Semanal Científica Gerada!', data: dietPlan }
 
   } catch (error: any) {
     console.error('ERRO GEMINI:', error)
@@ -102,7 +131,7 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
 /**
  * Gera um treino adaptativo usando Gemini API.
  */
-export async function generateWorkout(context: string): Promise<GenerationResult> {
+export async function generateWorkout(): Promise<GenerationResult> {
   try {
     const apiKey = getApiKey()
 
@@ -125,7 +154,7 @@ export async function generateWorkout(context: string): Promise<GenerationResult
     const prompt = `
       Você é um personal trainer especialista em preparação física de atletas.
       Crie 1 treino focado e adaptado para hoje considerando que o aluno é um ${nivel} focado em "${objetivo}".
-      Também leve em conta esse contexto ambiental ou lesão que ele declarou: "${context}".
+      Também leve em conta o que ele nos relatou do oceano hoje para prescrever a intensidade ideal/compensatória: "${perfil?.contexto_mar || "Treino padrão em academia/solo"}".
       
       Responda ESTRITAMENTE em formato JSON (sem markdown):
       {
@@ -151,6 +180,7 @@ export async function generateWorkout(context: string): Promise<GenerationResult
 
       const { error } = await supabase.from('logs_treino').insert({
         user_id: user.id,
+        data_treino: new Date().toISOString().split('T')[0],
         tipo_treino: workout.tipo_treino,
         descricao: workout.descricao,
         duracao_minutos: workout.duracao_minutos,

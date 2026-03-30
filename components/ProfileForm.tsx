@@ -54,6 +54,32 @@ export function ProfileForm({ initialData }: { initialData?: any }) {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-300">Idade</label>
+          <input
+            name="idade"
+            type="number"
+            required
+            defaultValue={initialData?.idade || ''}
+            placeholder="Ex: 28"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-300">Gênero Biológico</label>
+          <select 
+            name="genero"
+            defaultValue={initialData?.genero || 'Masculino'}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none text-zinc-50"
+          >
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+          </select>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <label className="text-sm font-medium text-zinc-300">Nível no Surf</label>
         <select 

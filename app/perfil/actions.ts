@@ -13,6 +13,8 @@ export async function updateProfile(formData: FormData) {
 
   const peso = parseFloat(formData.get('peso') as string)
   const altura = parseFloat(formData.get('altura') as string)
+  const idade = parseInt(formData.get('idade') as string)
+  const genero = formData.get('genero') as string
   const objetivo = formData.get('objetivo') as string
   const nivel_surf = formData.get('nivel_surf') as string
 
@@ -23,6 +25,8 @@ export async function updateProfile(formData: FormData) {
       email: user.email,
       peso,
       altura,
+      idade,
+      genero,
       objetivo,
       nivel_surf
     }, 
