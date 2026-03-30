@@ -47,9 +47,9 @@ export default function RootLayout({
           </nav>
 
           <div className="p-4 border-t border-zinc-800">
-            <Link href="/settings" className="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-50 transition-colors">
+            <Link href="/perfil" className="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-50 transition-colors">
               <Settings className="h-4 w-4 mr-3" />
-              Configurações
+              Biometria & Perfil
             </Link>
           </div>
         </aside>

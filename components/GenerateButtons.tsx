@@ -14,7 +14,7 @@ export function GenerateDietButton() {
       console.log('Botão clicado! Iniciando Server Action de Dieta...')
       setIsPending(true)
       
-      const res = await generateDailyDiet('Tenho 80kg, meu objetivo é performance no surf e hoje tem swell de 1.5m em Piatã.')
+      const res = await generateDailyDiet('Hoje o swell amanheceu clássico com 1.5m de onda em Piatã. Vento terral fraco.')
       
       console.log('Resposta do servidor:', res)
       if (res.success) {
@@ -54,7 +54,7 @@ export function GenerateWorkoutButton() {
       console.log('Botão clicado! Iniciando Server Action de Treino...')
       setIsPending(true)
       
-      const res = await generateWorkout('Swell alto, preciso de um treino rápido de mobilidade e core para preparar para o surf.')
+      const res = await generateWorkout('Hoje vou surfar um mar 1 metro tubulares rápidos. Preciso de flexibilidade no core.')
       
       if (res.success) {
         toast.success('Treino gerado com sucesso! Salvo no banco.')

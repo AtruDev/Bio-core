@@ -32,9 +32,24 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Crie uma conta para calcular dietas.')
+
+    // Busca a biometria
+    const { data: perfil } = await supabase.from('perfil_usuario').select('*').eq('id', user.id).single()
+
+    const peso = perfil?.peso ? `Pesando ${perfil.peso}kg` : "Com peso não informado"
+    const objetivo = perfil?.objetivo || "Manutenção"
+    const nivel = perfil?.nivel_surf || "Surfista Intermediário"
+
     const prompt = `
-      Você é um nutricionista especialista em surfistas.
-      Gere 3 refeições balanceadas para o dia considerando o seguinte contexto do usuário: "${context}".
+      Você é um nutricionista especialista estruturando marmitas/dieta para um atleta.
+      O usuário é um ${nivel}, ${peso}, e o objetivo principal do mês é: "${objetivo}".
+      Contexto de mar/condição atual: "${context}".
+      
+      Gere 3 refeições balanceadas para o dia considerando sua biometria exata.
       Responda ESTRITAMENTE em formato JSON com a seguinte estrutura de Array (sem formatação markdown):
       [
         {
@@ -53,9 +68,6 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
     textResult = textResult.replace(/```json|```/g, '').trim()
 
     const dietPlan = JSON.parse(textResult)
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
       // 1. Garante que o usuário tem um perfil configurado (necessário para a chave estrangeira funcionar)
@@ -101,12 +113,23 @@ export async function generateWorkout(context: string): Promise<GenerationResult
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Autenticação necessária.')
+
+    const { data: perfil } = await supabase.from('perfil_usuario').select('*').eq('id', user.id).single()
+    const nivel = perfil?.nivel_surf || "Surfista Intermediário"
+    const objetivo = perfil?.objetivo || "Manutenção de desempenho"
+
     const prompt = `
-      Você é um personal trainer especialista em surf.
-      Crie 1 treino focado para o dia considerando: "${context}".
+      Você é um personal trainer especialista em preparação física de atletas.
+      Crie 1 treino focado e adaptado para hoje considerando que o aluno é um ${nivel} focado em "${objetivo}".
+      Também leve em conta esse contexto ambiental ou lesão que ele declarou: "${context}".
+      
       Responda ESTRITAMENTE em formato JSON (sem markdown):
       {
-        "tipo_treino": "Treino Funcional",
+        "tipo_treino": "Treino Funcional Flex",
         "descricao": "Resumo do que fazer...",
         "duracao_minutos": 45,
         "intensidade": "Moderado"
@@ -118,9 +141,6 @@ export async function generateWorkout(context: string): Promise<GenerationResult
     textResult = textResult.replace(/```json|```/g, '').trim()
 
     const workout = JSON.parse(textResult)
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
       await supabase.from('perfil_usuario').upsert({
