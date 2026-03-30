@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Activity, Dumbbell, Home, LayoutDashboard, Settings, Utensils, Waves } from "lucide-react";
 import Link from "next/link";
+import { Toaster } from 'sonner';
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -57,6 +58,7 @@ export default function RootLayout({
         <div className="flex-1 flex flex-col pl-64">
           <main className="flex-1 p-8">
             {children}
+            <Toaster theme="dark" position="bottom-right" richColors />
           </main>
         </div>
       </body>

@@ -1,4 +1,5 @@
 import { ChevronRight, Dumbbell, Flame, Utensils, Waves, AlertTriangle } from "lucide-react";
+import { redirect } from 'next/navigation'
 import { createClient } from "@/utils/supabase/server";
 import { GenerateDietButton, GenerateWorkoutButton } from "@/components/GenerateButtons";
 
@@ -45,6 +46,13 @@ export default async function DashboardPage() {
     hasSupabase = false; // Força modo mock se as chaves forem as padrão
   }
 
+  const signOut = async () => {
+    'use server'
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    return redirect('/login')
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
@@ -52,12 +60,26 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Visão Geral</h1>
           <p className="text-zinc-400 mt-1">Seu resumo diário de Surf, Dieta e Treino.</p>
         </div>
-        {!hasSupabase && (
-          <div className="flex items-center space-x-2 text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 text-sm">
-            <AlertTriangle className="w-4 h-4" />
-            <span>Executando em Modo Mock (Configure o .env.local)</span>
-          </div>
-        )}
+        
+        <div className="flex items-center space-x-4">
+          {user && (
+            <div className="flex items-center space-x-3 text-sm">
+              <span className="hidden sm:inline-block text-zinc-400">{user.email}</span>
+              <form action={signOut}>
+                <button className="bg-zinc-900 border border-zinc-800 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-zinc-300 font-medium rounded-lg px-4 py-2 transition-all">
+                  Sair
+                </button>
+              </form>
+            </div>
+          )}
+
+          {!hasSupabase && (
+            <div className="flex items-center space-x-2 text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 text-sm">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Executando em Modo Mock</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

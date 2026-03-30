@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { generateDailyDiet, generateWorkout } from '@/app/actions/ai-actions'
 import { Sparkles, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function GenerateDietButton() {
   const [isPending, setIsPending] = useState(false)
@@ -17,14 +18,14 @@ export function GenerateDietButton() {
       
       console.log('Resposta do servidor:', res)
       if (res.success) {
-        setSuccess('Nova dieta gerada!')
+        toast.success('Deu bom! Nova dieta matemática calculada e salva.')
         setTimeout(() => window.location.reload(), 2000)
       } else {
-        alert('Erro: ' + res.message)
+        toast.error('O Google Gemini recusou: ' + res.message)
       }
     } catch (err: any) {
       console.error('Falha crítica na requisição:', err)
-      alert('Falha na comunicação com o servidor: ' + err.message)
+      toast.error('Falha severa na comunicação externa: ' + err.message)
     } finally {
       setIsPending(false)
     }
@@ -40,7 +41,6 @@ export function GenerateDietButton() {
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
         <span>{isPending ? 'Analisando e Gerando...' : 'Gerar Dieta IA (Swell)'}</span>
       </button>
-      {success && <p className="text-xs text-emerald-400 mt-2 text-center animate-pulse">{success}</p>}
     </div>
   )
 }
@@ -57,14 +57,14 @@ export function GenerateWorkoutButton() {
       const res = await generateWorkout('Swell alto, preciso de um treino rápido de mobilidade e core para preparar para o surf.')
       
       if (res.success) {
-        setSuccess('Novo treino gerado!')
+        toast.success('Treino gerado com sucesso! Salvo no banco.')
         setTimeout(() => window.location.reload(), 2000)
       } else {
-        alert('Erro: ' + res.message)
+        toast.error('Erro na IA: ' + res.message)
       }
     } catch (err: any) {
       console.error('Falha crítica na requisição:', err)
-      alert('Falha na comunicação com o servidor: ' + err.message)
+      toast.error('Erro de servidor: ' + err.message)
     } finally {
       setIsPending(false)
     }
@@ -80,7 +80,6 @@ export function GenerateWorkoutButton() {
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
         <span>{isPending ? 'Gerando Adaptação...' : 'Adaptar Treino IA'}</span>
       </button>
-      {success && <p className="text-xs text-orange-400 mt-2 text-center animate-pulse">{success}</p>}
     </div>
   )
 }

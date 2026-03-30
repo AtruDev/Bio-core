@@ -30,7 +30,7 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const prompt = `
       Você é um nutricionista especialista em surfistas.
@@ -58,6 +58,14 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
+      // 1. Garante que o usuário tem um perfil configurado (necessário para a chave estrangeira funcionar)
+      await supabase.from('perfil_usuario').upsert({
+        id: user.id,
+        nome: 'Atru',
+        email: user.email
+      }, { onConflict: 'id' })
+
+      // 2. Insere a dieta
       const inserts = dietPlan.map((item: any) => ({
         user_id: user.id,
         refeicao_nome: item.refeicao_nome,
@@ -67,7 +75,8 @@ export async function generateDailyDiet(context: string): Promise<GenerationResu
         carboidratos: item.carboidratos,
         gorduras: item.gorduras,
       }))
-      await supabase.from('dieta_atual').insert(inserts)
+      const { error } = await supabase.from('dieta_atual').insert(inserts)
+      if (error) throw new Error('Falha ao salvar a dieta no banco: ' + error.message)
     }
 
     return { success: true, message: 'Dieta gerada!', data: dietPlan }
@@ -114,13 +123,20 @@ export async function generateWorkout(context: string): Promise<GenerationResult
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      await supabase.from('logs_treino').insert({
+      await supabase.from('perfil_usuario').upsert({
+        id: user.id,
+        nome: 'Atru',
+        email: user.email
+      }, { onConflict: 'id' })
+
+      const { error } = await supabase.from('logs_treino').insert({
         user_id: user.id,
         tipo_treino: workout.tipo_treino,
         descricao: workout.descricao,
         duracao_minutos: workout.duracao_minutos,
         intensidade: workout.intensidade
       })
+      if (error) throw new Error('Falha ao salvar o treino: ' + error.message)
     }
 
     return { success: true, message: 'Treino gerado!', data: workout }
